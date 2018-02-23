@@ -136,15 +136,12 @@ __PACKAGE__->table("runs");
   extra: {custom_type_name => "store_toggle",list => ["yes","no","fail"]}
   is_nullable: 0
 
-=head2 log_file
+=head2 log_file_id
 
-  data_type: 'text'
-  is_nullable: 0
-
-=head2 log_data
-
-  data_type: 'bytea'
-  is_nullable: 0
+  data_type: 'uuid'
+  is_foreign_key: 1
+  is_nullable: 1
+  size: 16
 
 =head2 status
 
@@ -217,10 +214,8 @@ __PACKAGE__->add_columns(
     extra => { custom_type_name => "store_toggle", list => ["yes", "no", "fail"] },
     is_nullable => 0,
   },
-  "log_file",
-  { data_type => "text", is_nullable => 0 },
-  "log_data",
-  { data_type => "bytea", is_nullable => 0 },
+  "log_file_id",
+  { data_type => "uuid", is_foreign_key => 1, is_nullable => 1, size => 16 },
   "status",
   {
     data_type => "enum",
@@ -260,6 +255,26 @@ __PACKAGE__->has_many(
   "Test2::Harness::UI::Schema::Result::Job",
   { "foreign.run_id" => "self.run_id" },
   { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 log_file
+
+Type: belongs_to
+
+Related object: L<Test2::Harness::UI::Schema::Result::LogFile>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "log_file",
+  "Test2::Harness::UI::Schema::Result::LogFile",
+  { log_file_id => "log_file_id" },
+  {
+    is_deferrable => 0,
+    join_type     => "LEFT",
+    on_delete     => "NO ACTION",
+    on_update     => "NO ACTION",
+  },
 );
 
 =head2 run_comments
@@ -338,8 +353,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07048 @ 2018-02-21 16:37:07
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:EBhVZgkVpoGMYhb/WAqckA
+# Created by DBIx::Class::Schema::Loader v0.07048 @ 2018-02-23 09:05:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:k5bxyHn+a/G3P0980iEiiA
 
 __PACKAGE__->inflate_column(
     parameters => {

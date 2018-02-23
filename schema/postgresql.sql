@@ -85,6 +85,12 @@ CREATE TABLE api_keys (
 );
 CREATE INDEX IF NOT EXISTS api_key_user ON api_keys(user_id);
 
+CREATE TABLE log_files (
+    log_file_id     UUID            DEFAULT UUID_GENERATE_V4() PRIMARY KEY,
+    name            TEXT            NOT NULL,
+    data            BYTEA           NOT NULL
+);
+
 CREATE TABLE runs (
     run_id          UUID            DEFAULT UUID_GENERATE_V4() PRIMARY KEY,
     user_id         UUID            NOT NULL REFERENCES users(user_id),
@@ -106,8 +112,7 @@ CREATE TABLE runs (
     mode            run_modes       NOT NULL DEFAULT 'qvfd',
     store_orphans   store_toggle    NOT NULL DEFAULT 'fail',
 
-    log_file        TEXT            NOT NULL,
-    log_data        BYTEA           NOT NULL,
+    log_file_id     UUID            DEFAULT NULL REFERENCES log_files(log_file_id),
     status          queue_status    NOT NULL DEFAULT 'pending'
 );
 CREATE INDEX IF NOT EXISTS run_projects ON runs(project);

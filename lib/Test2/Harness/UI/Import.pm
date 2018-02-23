@@ -73,14 +73,15 @@ sub eord {
 sub process {
     my $self = shift;
 
-    my $run  = $self->{+RUN};
+    my $run = $self->{+RUN};
+    my $log = $run->log_file or die "No log file";
 
     my $fh;
-    if ($run->log_file =~ m/\.bz2$/) {
-        $fh = IO::Uncompress::Bunzip2->new(\($run->log_data)) or die "Could not open bz2 data: $Bunzip2Error";
+    if ($log->name =~ m/\.bz2$/) {
+        $fh = IO::Uncompress::Bunzip2->new(\($log->data)) or die "Could not open bz2 data: $Bunzip2Error";
     }
     else {
-        $fh = IO::Uncompress::Gunzip->new(\($run->log_data)) or die "Could not open gz data: $GunzipError";
+        $fh = IO::Uncompress::Gunzip->new(\($log->data)) or die "Could not open gz data: $GunzipError";
     }
 
     my $schema = $self->{+CONFIG}->schema;

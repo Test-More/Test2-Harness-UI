@@ -83,14 +83,17 @@ sub process_form {
             permissions   => $perms,
             mode          => $mode,
             store_orphans => $store_orphans,
-            log_file      => $file,
-            log_data      => do { local $/; <$fh> },
             project       => $project,
             version       => $version,
             category      => $category,
             tier          => $tier,
             build         => $build,
             status        => 'pending',
+
+            log_file => {
+                name => $file,
+                data => do { local $/; <$fh> },
+            },
         }
     );
 

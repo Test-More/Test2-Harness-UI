@@ -57,11 +57,14 @@ for my $file (qw/moose.jsonl.bz2 simple-fail.jsonl.bz2  simple-pass.jsonl.bz2 fa
             permissions   => shift @perms || 'public',
             mode          => shift @modes || 'qvfd',
             store_orphans => 'fail',
-            log_file      => $file,
-            log_data      => $log_data,
             status        => 'pending',
             project       => $project,
             version       => $version,
+
+            log_file => {
+                name => $file,
+                data => $log_data,
+            },
         }
     );
 }

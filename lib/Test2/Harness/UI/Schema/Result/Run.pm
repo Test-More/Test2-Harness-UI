@@ -63,14 +63,16 @@ __PACKAGE__->table("runs");
   is_nullable: 0
   size: 16
 
-=head2 passed
+=head2 status
 
-  data_type: 'integer'
-  is_nullable: 1
+  data_type: 'enum'
+  default_value: 'pending'
+  extra: {custom_type_name => "queue_status",list => ["pending","running","complete","broken"]}
+  is_nullable: 0
 
-=head2 failed
+=head2 error
 
-  data_type: 'integer'
+  data_type: 'text'
   is_nullable: 1
 
 =head2 project
@@ -98,16 +100,6 @@ __PACKAGE__->table("runs");
   data_type: 'citext'
   is_nullable: 1
 
-=head2 parameters
-
-  data_type: 'jsonb'
-  is_nullable: 1
-
-=head2 error
-
-  data_type: 'text'
-  is_nullable: 1
-
 =head2 added
 
   data_type: 'timestamp'
@@ -129,13 +121,6 @@ __PACKAGE__->table("runs");
   extra: {custom_type_name => "run_modes",list => ["summary","qvfd","qvf","complete"]}
   is_nullable: 0
 
-=head2 store_orphans
-
-  data_type: 'enum'
-  default_value: 'fail'
-  extra: {custom_type_name => "store_toggle",list => ["yes","no","fail"]}
-  is_nullable: 0
-
 =head2 log_file_id
 
   data_type: 'uuid'
@@ -143,12 +128,20 @@ __PACKAGE__->table("runs");
   is_nullable: 1
   size: 16
 
-=head2 status
+=head2 passed
 
-  data_type: 'enum'
-  default_value: 'pending'
-  extra: {custom_type_name => "queue_status",list => ["pending","running","complete","failed"]}
-  is_nullable: 0
+  data_type: 'integer'
+  is_nullable: 1
+
+=head2 failed
+
+  data_type: 'integer'
+  is_nullable: 1
+
+=head2 parameters
+
+  data_type: 'jsonb'
+  is_nullable: 1
 
 =cut
 
@@ -162,10 +155,18 @@ __PACKAGE__->add_columns(
   },
   "user_id",
   { data_type => "uuid", is_foreign_key => 1, is_nullable => 0, size => 16 },
-  "passed",
-  { data_type => "integer", is_nullable => 1 },
-  "failed",
-  { data_type => "integer", is_nullable => 1 },
+  "status",
+  {
+    data_type => "enum",
+    default_value => "pending",
+    extra => {
+      custom_type_name => "queue_status",
+      list => ["pending", "running", "complete", "broken"],
+    },
+    is_nullable => 0,
+  },
+  "error",
+  { data_type => "text", is_nullable => 1 },
   "project",
   { data_type => "citext", is_nullable => 0 },
   "version",
@@ -176,10 +177,6 @@ __PACKAGE__->add_columns(
   { data_type => "citext", is_nullable => 1 },
   "build",
   { data_type => "citext", is_nullable => 1 },
-  "parameters",
-  { data_type => "jsonb", is_nullable => 1 },
-  "error",
-  { data_type => "text", is_nullable => 1 },
   "added",
   {
     data_type     => "timestamp",
@@ -207,25 +204,14 @@ __PACKAGE__->add_columns(
     },
     is_nullable => 0,
   },
-  "store_orphans",
-  {
-    data_type => "enum",
-    default_value => "fail",
-    extra => { custom_type_name => "store_toggle", list => ["yes", "no", "fail"] },
-    is_nullable => 0,
-  },
   "log_file_id",
   { data_type => "uuid", is_foreign_key => 1, is_nullable => 1, size => 16 },
-  "status",
-  {
-    data_type => "enum",
-    default_value => "pending",
-    extra => {
-      custom_type_name => "queue_status",
-      list => ["pending", "running", "complete", "failed"],
-    },
-    is_nullable => 0,
-  },
+  "passed",
+  { data_type => "integer", is_nullable => 1 },
+  "failed",
+  { data_type => "integer", is_nullable => 1 },
+  "parameters",
+  { data_type => "jsonb", is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -353,8 +339,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07048 @ 2018-02-23 09:05:32
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:k5bxyHn+a/G3P0980iEiiA
+# Created by DBIx::Class::Schema::Loader v0.07049 @ 2018-04-20 01:19:54
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:gjuUE3YGdyU7UTSZmZQ3og
 
 __PACKAGE__->inflate_column(
     parameters => {

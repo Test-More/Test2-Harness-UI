@@ -20,13 +20,30 @@ sub run {
 
     my $schema = $self->{+CONFIG}->schema;
 
+
     while (1) {
-        while (my $run = $schema->resultset('Run')->search({status => 'pending', log_file_id => {'is not' => undef}})->first()) {
-            $run->update({status => 'running'});
-            $self->process($run);
+        $schema->txn_begin;
+        my $rs = $schema->resultset('Run')->search(
+            {status => 'pending', log_file_id => {'is not' => undef}},
+            {order_by => {-asc => 'added'}, limit => 1},
+        );
+
+        my $run = $rs->first();
+
+        unless($run) {
+            sleep 1;
+            next;
         }
 
-        sleep 1;
+        my $ok = eval { $run->update({status => 'running'}); 1 };
+        $ok &&= eval { $schema->txn_commit; 1 };
+
+        unless($ok) {
+            eval { $schema->txn_rollback };
+            next;
+        }
+
+        $self->process($run);
     }
 }
 
@@ -62,7 +79,7 @@ sub process {
     else {
         my $error = $ok ? join("\n" => @{$status->{errors}}) : $err;
         syswrite(\*STDOUT, "Failed feed " . $run->run_id . " (" . $run->log_file->name . ") in $total seconds.\n$error\n");
-        $run->update({status => 'failed', error => $error});
+        $run->update({status => 'broken', error => $error});
     }
 
     return;

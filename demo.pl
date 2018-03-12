@@ -35,8 +35,8 @@ my $user = $config->schema->resultset('User')->create({username => 'root', passw
 
 my @runs;
 my @perms = qw/public protected private/;
-my @modes = qw/complete/;
-for my $file (qw/moose.jsonl.bz2 simple-fail.jsonl.bz2  simple-pass.jsonl.bz2 fake.jsonl.bz2 large.jsonl.bz2/) {
+my @modes = qw/complete complete complete/;
+for my $file (qw/moose.jsonl.bz2 tiny.jsonl.bz2 tap.jsonl.bz2 simple-fail.jsonl.bz2 simple-pass.jsonl.bz2 fake.jsonl.bz2 large.jsonl.bz2/) {
     my $fh = IO::Uncompress::Bunzip2->new("./demo/$file") or die "Could not open bz2 file: $Bunzip2Error";
     my $log_data;
     bzip2 $fh => \$log_data or die "IO::Compress::Bzip2 failed: $Bzip2Error";
@@ -56,7 +56,6 @@ for my $file (qw/moose.jsonl.bz2 simple-fail.jsonl.bz2  simple-pass.jsonl.bz2 fa
             user_id       => $user->user_id,
             permissions   => shift @perms || 'public',
             mode          => shift @modes || 'qvfd',
-            store_orphans => 'fail',
             status        => 'pending',
             project       => $project,
             version       => $version,

@@ -70,7 +70,6 @@ sub process_form {
 
     my $perms         = $req->parameters->{permissions}   || 'private';
     my $mode          = $req->parameters->{mode}          || 'qvfd';
-    my $store_orphans = $req->parameters->{store_orphans} || 'fail';
 
     return $res->add_error("Unsupported file type, must be .jsonl.bz2, or .jsonl.gz")
         unless $file =~ m/\.jsonl\.(bz2|gz)$/;
@@ -82,7 +81,6 @@ sub process_form {
             user_id       => $user->user_id,
             permissions   => $perms,
             mode          => $mode,
-            store_orphans => $store_orphans,
             project       => $project,
             version       => $version,
             category      => $category,

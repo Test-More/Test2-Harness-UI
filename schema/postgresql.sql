@@ -161,6 +161,9 @@ CREATE TABLE jobs (
     start           TIMESTAMP       DEFAULT NULL,
     ended           TIMESTAMP       DEFAULT NULL,
 
+    pass_count      BIGINT          DEFAULT NULL,
+    fail_count      BIGINT          DEFAULT NULL,
+
     -- Process time data
     time_user       DECIMAL(20,10)  DEFAULT NULL,
     time_sys        DECIMAL(20,10)  DEFAULT NULL,

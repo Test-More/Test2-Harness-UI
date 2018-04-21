@@ -107,6 +107,16 @@ __PACKAGE__->table("jobs");
   data_type: 'timestamp'
   is_nullable: 1
 
+=head2 pass_count
+
+  data_type: 'bigint'
+  is_nullable: 1
+
+=head2 fail_count
+
+  data_type: 'bigint'
+  is_nullable: 1
+
 =head2 time_user
 
   data_type: 'numeric'
@@ -206,6 +216,10 @@ __PACKAGE__->add_columns(
   { data_type => "timestamp", is_nullable => 1 },
   "ended",
   { data_type => "timestamp", is_nullable => 1 },
+  "pass_count",
+  { data_type => "bigint", is_nullable => 1 },
+  "fail_count",
+  { data_type => "bigint", is_nullable => 1 },
   "time_user",
   {
     data_type => "numeric",
@@ -327,8 +341,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2018-04-20 04:23:38
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:DG+2pNieaS6LO/MZ/I8Ivw
+# Created by DBIx::Class::Schema::Loader v0.07049 @ 2018-04-20 07:01:56
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:HOhpv866C3Z/QoRwHTKCBA
 
 __PACKAGE__->inflate_column(
     parameters => {

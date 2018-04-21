@@ -41,7 +41,7 @@ t2hui.build_run = function(run_id, root, list) {
 
         job_dom = t2hui.build_run_job(job);
 
-        if (job.name === '0') {
+        if (!job.file) {
             log.before(job_dom);
         }
         else if (job.fail) {
@@ -75,18 +75,30 @@ t2hui.build_run_job_header = function(job) {
 }
 
 t2hui.build_run_job = function(job) {
+    var tools = $('<div class="col1 tools"></div>');
+
+    var params = $('<div class="tool etoggle" title="See Job Parameters"><i class="far fa-list-alt"></i></div>');
+    tools.append(params);
+    params.click(function() {
+        $('#modal_body').jsonView(job.parameters, {collapsed: true});
+        $('#free_modal').slideDown();
+    });
+
+    var link = base_uri + 'job/' + job.job_id;
+    var go = $('<a class="tool etoggle" title="Open Job" href="' + link + '"><i class="fas fa-external-link-alt"></i></a>');
+    tools.append(go);
+
     var me = [
-        $('<div class="col1 tools"></div>')[0],
-        $('<div class="col2 pass count">-</div>')[0],
-        $('<div class="col3 fail count">-</div>')[0],
-        $('<div class="col4 job_name">' + job.file + '</div>')[0],
-        $('<div class="col5 exit count">' + job.exit + '</div>')[0],
+        tools[0],
+        $('<div class="col2 pass count">' + (job.pass_count || '0') + '</div>')[0],
+        $('<div class="col3 fail count">' + (job.fail_count || '0') + '</div>')[0],
+        $('<div class="col4 job_name">' + (job.short_file || job.name) + '</div>')[0],
+        $('<div class="col5 exit count">' + (job.exit != null ? job.exit : 'N/A') + '</div>')[0],
     ];
 
     var $me = $(me);
 
-    if (job.name !== '0') {
-        console.log("do it");
+    if (job.file) {
         if (job.fail) {
             $me.addClass('error_set');
         }

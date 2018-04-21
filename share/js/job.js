@@ -1,3 +1,13 @@
+$(function() {
+    $("div.job").each(function() {
+        var me = $(this);
+        t2hui.build_run(me.attr('data-job-id'), me);
+    });
+});
+
+
+
+/*
 t2hui.build_job = function(job) {
     var root;
 

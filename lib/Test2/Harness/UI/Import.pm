@@ -52,7 +52,7 @@ sub init {
     $self->{+PASSED} = 0;
     $self->{+FAILED} = 0;
 
-    $self->{+JOB_ORD}    = 0;
+    $self->{+JOB_ORD}    = 1;
     $self->{+JOB0_ID}    = gen_uuid();
     $self->{+JOB_BUFFER} = {
         $self->{+JOB0_ID} => {
@@ -120,6 +120,7 @@ sub flush_ready_jobs {
         $record_job ||= 1 if $job->{job_id} eq $self->{+JOB0_ID};
         $record_job ||= 1 if $mode >= $MODES{qvf} && $job->{fail};;
 
+        my @local_events;
         for my $event (sort { $a->{event_ord} <=> $b->{event_ord} } values %$events) {
             my $is_diag = delete $event->{is_diag};
             my $record_event = $record_job || ($mode >= $MODES{qvfd} && $is_diag);
@@ -183,11 +184,13 @@ sub process_event {
     my $job_id = $f->{harness}->{job_id};
     $job_id = $self->{+JOB0_ID} if !$job_id || $job_id eq '0';
     my $job = $self->{+JOB_BUFFER}->{$job_id} ||= {
-        job_id    => $job_id,
-        job_ord   => $self->{+JOB_ORD}++,
-        run_id    => $self->{+RUN}->run_id,
-        events    => {},
-        event_ord => 1,
+        job_id      => $job_id,
+        job_ord     => $self->{+JOB_ORD}++,
+        run_id      => $self->{+RUN}->run_id,
+        events      => {},
+        event_ord   => 1,
+        fail_count  => 0,
+        pass_count  => 0,
     };
 
     my $e_id = $f->{harness}->{event_id};
@@ -231,22 +234,41 @@ sub process_event {
 
     return if $nested;
 
-    $self->update_job($job, $f) if first { $f->{$_} } qw{
+    if ($f->{assert}) {
+        if (causes_fail($f)) {
+            $job->{fail_count}++;
+        }
+        else {
+            $job->{pass_count}++;
+        }
+    }
+    elsif (causes_fail($f)) {
+        $job->{fail_count}++;
+    }
+
+    $self->update_other($job, $f) if first { $f->{$_} } qw{
         harness_job harness_job_exit harness_job_start harness_job_launch harness_job_end
         memory times
+        harness_run
     };
 
     return;
 }
 
-sub update_job {
+sub update_other {
     my $self = shift;
     my ($job, $f) = @_;
+
+    if (my $run_data = $f->{harness_run}) {
+        clean($run_data);
+        $self->{+RUN}->update({parameters => $run_data});
+    }
 
     # Handle job events
     if (my $job_data = $f->{harness_job}) {
         $job->{file} ||= $job_data->{file};
         $job->{name} ||= $job_data->{job_name};
+        clean($job_data);
         $job->{parameters} = encode_json($job_data);
         $f->{harness_job}  = "Removed, see job with job_id $job->{job_id}";
     }

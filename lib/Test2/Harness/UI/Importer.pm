@@ -22,24 +22,21 @@ sub run {
 
 
     while (1) {
-        $schema->txn_begin;
-        my $rs = $schema->resultset('Run')->search(
-            {status => 'pending', log_file_id => {'is not' => undef}},
-            {order_by => {-asc => 'added'}, limit => 1},
+        my $run = $schema->txn_do(
+            sub {
+                my $run = $schema->resultset('Run')->search(
+                    {status => 'pending', log_file_id => {'is not' => undef}},
+                    {order_by => {-asc => 'added'}, limit => 1, for => \'update skip locked'},
+                )->first;
+                return unless $run;
+
+                $run->update({status => 'running'});
+                return $run;
+            }
         );
 
-        my $run = $rs->first();
-
-        unless($run) {
+        unless ($run) {
             sleep 1;
-            next;
-        }
-
-        my $ok = eval { $run->update({status => 'running'}); 1 };
-        $ok &&= eval { $schema->txn_commit; 1 };
-
-        unless($ok) {
-            eval { $schema->txn_rollback };
             next;
         }
 
@@ -56,7 +53,6 @@ sub process {
 
     my $status;
     my $ok = eval {
-        $run->update({status => 'running'});
         my $import = Test2::Harness::UI::Import->new(
             config => $self->{+CONFIG},
             run    => $run,

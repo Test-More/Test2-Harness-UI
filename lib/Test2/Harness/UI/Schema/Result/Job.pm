@@ -353,7 +353,7 @@ __PACKAGE__->inflate_column(
 
 sub short_file {
     my $self = shift;
-    my $file = $self->file or return '<NO FILE>';
+    my $file = $self->file or return undef;
 
     return $1 if $file =~ m{/(t2?/.*)$}i;
     return $1 if $file =~ m{([^/\\]+\.(?:t2?|pl))$}i;

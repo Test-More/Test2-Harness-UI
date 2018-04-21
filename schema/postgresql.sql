@@ -217,7 +217,6 @@ CREATE TABLE events (
 CREATE INDEX IF NOT EXISTS event_job    ON events(job_id);
 CREATE INDEX IF NOT EXISTS event_trace  ON events(trace_id);
 CREATE INDEX IF NOT EXISTS event_parent ON events(parent_id);
-CREATE INDEX IF NOT EXISTS event_jsons  ON events(facets, orphan);
 
 CREATE TABLE event_comments (
     event_comment_id    UUID        DEFAULT UUID_GENERATE_V4() PRIMARY KEY,

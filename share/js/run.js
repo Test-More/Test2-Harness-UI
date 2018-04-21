@@ -67,7 +67,7 @@ t2hui.build_run_job_header = function(job) {
         $('<div class="col1 head tools">Tools</div>'),
         $('<div class="col2 head pass count">P</div>'),
         $('<div class="col3 head fail count">F</div>'),
-        $('<div class="col4 head job_name">Job Name</div>'),
+        $('<div class="col4 head job_name">File/Job Name</div>'),
         $('<div class="col5 head exit count">Exit</div>'),
     ];
 

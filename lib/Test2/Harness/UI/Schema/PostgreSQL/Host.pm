@@ -26,15 +26,19 @@ __PACKAGE__->add_columns(
   },
   "hostname",
   { data_type => "varchar", is_nullable => 0, size => 512 },
-  "test_slots",
-  { data_type => "integer", is_nullable => 0 },
 );
 __PACKAGE__->set_primary_key("host_id");
 __PACKAGE__->add_unique_constraint("hosts_hostname_key", ["hostname"]);
+__PACKAGE__->has_many(
+  "resources",
+  "Test2::Harness::UI::Schema::Result::Resource",
+  { "foreign.host_id" => "self.host_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
 
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2023-01-04 09:07:20
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:iGJZW12ksVQnUxLi+e2g9w
+# Created by DBIx::Class::Schema::Loader v0.07049 @ 2023-01-23 09:08:36
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:4g1UbP2ORl0Pa5hQ7d3HqA
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

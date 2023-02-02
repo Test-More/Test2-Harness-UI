@@ -35,7 +35,6 @@ CREATE TABLE primary_email (
 CREATE TABLE hosts (
     host_id     CHAR(36)        NOT NULL PRIMARY KEY,
     hostname    VARCHAR(512)    NOT NULL,
-    test_slots  INT             NOT NULL,
 
     unique(hostname)
 ) ROW_FORMAT=COMPRESSED;
@@ -371,3 +370,23 @@ CREATE INDEX reporting_b    ON reporting(project_id, user_id);
 CREATE INDEX reporting_c    ON reporting(project_id, test_file_id, subtest);
 CREATE INDEX reporting_d    ON reporting(project_id, test_file_id, subtest, user_id);
 CREATE INDEX reporting_e    ON reporting(project_id, test_file_id, subtest, user_id, run_ord);
+
+CREATE TABLE resources (
+    resource_id     CHAR(36)        NOT NULL PRIMARY KEY,
+
+    run_id          CHAR(36)        DEFAULT NULL,
+    host_id         CHAR(36)        DEFAULT NULL,
+    global          BOOL            NOT NULL DEFAULT FALSE,
+
+    module          VARCHAR(512)    NOT NULL,
+    stamp           TIMESTAMP       NOT NULL,
+    data            LONGTEXT        NOT NULL,
+
+    FOREIGN KEY (run_id)            REFERENCES runs(run_id),
+    FOREIGN KEY (host_id)           REFERENCES hosts(host_id)
+);
+CREATE INDEX global_resource_name ON resources(global, module);
+CREATE INDEX host_resource_name ON resources(host_id, module);
+CREATE INDEX run_resource_name ON resources(run_id, module);
+CREATE INDEX resource_name ON resources(module);
+

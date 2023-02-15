@@ -352,17 +352,8 @@ CREATE INDEX IF NOT EXISTS reporting_e    ON reporting(project_id, test_file_id,
 
 CREATE TABLE resources (
     resource_id     UUID            DEFAULT UUID_GENERATE_V4() PRIMARY KEY,
-
     run_id          UUID            DEFAULT NULL REFERENCES runs(run_id),
-    host_id         UUID            DEFAULT NULL REFERENCES hosts(host_id),
-    global          BOOL            NOT NULL DEFAULT FALSE,
-
     module          VARCHAR(512)    NOT NULL,
-    stamp           TIMESTAMP       NOT NULL,
+    stamp           TIMESTAMP(4)    NOT NULL,
     data            JSONB           NOT NULL
 );
-CREATE INDEX IF NOT EXISTS global_resource_name ON resources(global, module);
-CREATE INDEX IF NOT EXISTS host_resource_name ON resources(host_id, module);
-CREATE INDEX IF NOT EXISTS run_resource_name ON resources(run_id, module);
-CREATE INDEX IF NOT EXISTS resource_name ON resources(module);
-

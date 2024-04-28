@@ -24,7 +24,7 @@ my %SCHEMA_TO_QDB_DRIVER = (
 my %SCHEMA_TO_DBD_DRIVER = (
     mariadb    => 'DBD::MariaDB',
     mysql      => 'DBD::mysql',
-    postgresql => 'DBD::postgresql',
+    postgresql => 'DBD::Pg',
 );
 
 my %BAD_ST_NAME = (
@@ -51,10 +51,10 @@ sub find_job {
         return $jobs->search({job_id => $uuid}, {order_by => {'-desc' => 'job_try'}, limit => 1})->first
             if $try == -1;
 
-        return $jobs->search({job_id => $uuid, job_try => $try})->first;
+        return $jobs->find({job_id => $uuid, job_try => $try});
     }
 
-    return $jobs->search({job_key => $uuid})->first
+    return $jobs->find({job_key => $uuid})
         || $jobs->search({job_id  => $uuid}, {order_by => {'-desc' => 'job_try'}, limit => 1})->first;
 }
 

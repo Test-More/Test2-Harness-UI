@@ -10,14 +10,36 @@ use overload(
 
 use Data::UUID;
 use Scalar::Util qw/blessed reftype/;
-use Test2::Harness::Util qw/looks_like_uuid/;
-use Test2::Harness::Util::UUID qw/UG/;
+use Test2::Harness::Util;
 
-require Test2::Harness::Util::UUID;
 require bytes;
 
 use Importer Importer => 'import';
 our @EXPORT_OK = qw/uuid_inflate uuid_deflate gen_uuid uuid_mass_inflate uuid_mass_deflate looks_like_uuid_36_or_16/;
+
+# Provide Test2-Harness 2.0 support
+sub looks_like_uuid {
+    my ($maybe_uuid) = @_;
+    my $looks_like_uuid = Test2::Harness::Util->can('looks_like_uuid');
+    if(ref $looks_like_uuid ne 'CODE') {
+        require Test2::Util::UUID;
+        $looks_like_uuid = Test2::Util::UUID->can('looks_like_uuid');
+        die "looks_like_uuid not provided by either Test2::Harness::Util or Test2::Util::UUID!" if ref $looks_like_uuid ne 'CODE';
+    }
+    return $looks_like_uuid->($maybe_uuid);
+}
+
+my $ug_obj;
+sub UG {
+    return $ug_obj if ref $ug_obj eq 'Data::UUID';
+    local $@;
+    my $obj = eval {
+        require Test2::Harness::Util::UUID;
+        Test2::Harness::Util::UUID::UG();
+    };
+    $obj = Data::UUID->new() if ref $obj ne 'Data::UUID';
+    return $ug_obj = $obj;
+}
 
 sub gen_uuid {
     my $binary = UG()->create();
@@ -36,7 +58,7 @@ sub gen_uuid {
 sub new {
     my $class = shift;
     my ($val) = @_;
-    $val //= lc(Test2::Harness::Util::UUID::gen_uuid());
+    $val //= lc(gen_uuid());
     return uuid_inflate($val);
 }
 

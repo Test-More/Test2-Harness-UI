@@ -40,6 +40,9 @@ sub _from_project {
     croak "project_name is required"
         unless defined $project_name;
 
+    my %VALID_FIELDS = map { $_ => 1 } qw/version category tier build/;
+    croak "Invalid field: $field" unless $VALID_FIELDS{$field};
+
     my $dbh = $self->{+CONFIG}->connect;
 
     my $schema = $self->{+CONFIG}->schema;

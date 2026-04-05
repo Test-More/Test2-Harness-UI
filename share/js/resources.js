@@ -86,8 +86,8 @@ function load_resource(stamp) {
             var resources = [];
 
             item.resources.forEach(function(res) {
-                var res = build_resource( content, res );
-                resources.push(res);
+                var built = build_resource( content, res );
+                resources.push(built);
             });
 
             content.children('div.resource').detach();

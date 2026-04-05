@@ -12,6 +12,7 @@ use Test2::API qw/context/;
 use Test2::Tools::QuickDB;
 use Test2::Tools::Basic qw/note/;
 
+use POSIX ();
 use Carp qw/croak/;
 use Time::HiRes qw/sleep/;
 use Test2::Util qw/pkg_to_file/;
@@ -78,7 +79,7 @@ sub init {
     unless ($pid) {
         my $guard = guard {
             warn "Scope Leak in starman";
-            posix::_exit(255);
+            POSIX::_exit(255);
         };
 
         local $ENV{HARNESS_UI_DSN} = $dsn;

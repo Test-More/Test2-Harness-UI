@@ -43,7 +43,9 @@ sub handle {
     my $type = $log->name =~ m/\.bz2/ ? 'application/x-bzip2' : 'application/gzip';
 
     $res->content_type($type);
-    $res->header('Content-Disposition' => "attachment; filename=" . $log->name);
+    my $safe_name = $log->name;
+    $safe_name =~ s/[\r\n]//g;
+    $res->header('Content-Disposition' => "attachment; filename=\"" . $safe_name . "\"");
     $res->body($log->data);
     return $res;
 }

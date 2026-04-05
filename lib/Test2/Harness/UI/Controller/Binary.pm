@@ -33,11 +33,14 @@ sub handle {
 
     $res->content_type('application/x-binary');
 
+    my $safe_filename = $filename;
+    $safe_filename =~ s/[\r\n]//g;
+
     if ($binary->is_image) {
-        $res->header('Content-Disposition' => "inline; filename=" . $filename);
+        $res->header('Content-Disposition' => "inline; filename=\"" . $safe_filename . "\"");
     }
     else {
-        $res->header('Content-Disposition' => "attachment; filename=" . $filename);
+        $res->header('Content-Disposition' => "attachment; filename=\"" . $safe_filename . "\"");
     }
 
     $res->body($binary->data);

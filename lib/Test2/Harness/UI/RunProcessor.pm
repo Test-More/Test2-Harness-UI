@@ -344,10 +344,12 @@ sub flush_reporting {
             );
 
             if (my $duration = $job->{duration}) {
-                my $fail  = $job->{result}->fail // 0;
+                my $raw_fail  = $job->{result}->fail;
+                my $raw_retry = $job->{result}->retry;
+                my $abort = (defined($raw_fail) || defined($raw_retry)) ? 0 : 1;
+                my $fail  = $raw_fail  // 0;
                 my $pass  = $fail ? 0 : 1;
-                my $retry = $job->{result}->retry // 0;
-                my $abort = (defined($fail) || defined($retry)) ? 0 : 1;
+                my $retry = $raw_retry // 0;
 
                 push @write => {
                     reporting_id => gen_uuid(),

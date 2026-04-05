@@ -73,7 +73,7 @@ sub run {
             }) or die "Could not add permissions for $id on $project";
         }
     }
-    close($dfh);
+    close($pfh);
 
     my $dbh = $self->{+CONFIG}->connect;
     my $sth = $dbh->prepare('DELETE FROM permissions WHERE cpan_batch IS NOT NULL AND cpan_batch != ?');

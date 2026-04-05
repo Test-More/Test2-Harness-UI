@@ -65,7 +65,7 @@ sub load {
                 $runner->run(sub {
                     my $start = time;
                     print "$$ $source STARTED ($pageinfo) <- $file\n";
-                    my $fh = IO::Uncompress::Bunzip2->new($file) or die "Could not open log file: $IO::Uncompress::Bunzip2::Bzip2Error";
+                    my $fh = IO::Uncompress::Bunzip2->new($file) or die "Could not open log file: $IO::Uncompress::Bunzip2::Bunzip2Error";
 
                     my $count = 0;
                     while (my $line = <$fh>) {

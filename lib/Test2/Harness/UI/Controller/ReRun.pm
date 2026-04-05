@@ -30,7 +30,7 @@ sub handle {
         $run_id = uuid_inflate($run_id) or die error(404 => "Invalid run id");
     }
 
-    error(404 => 'No source') unless $run_id || ($project_name && $username);
+    die error(404 => 'No source') unless $run_id || ($project_name && $username);
     my $schema = $self->{+CONFIG}->schema;
 
     my $query = {};

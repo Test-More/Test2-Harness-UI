@@ -192,7 +192,9 @@ sub render_event {
 
     my $out;
     eval { $out = $self->_render_event(@args); 1 } and return $out;
-    warn "YathUI-DB Renderer error:\n====\n$@\n====\n";
+    my $err = $@;
+    warn "YathUI-DB Renderer error:\n====\n$err\n====\n";
+    die $err unless $self->{+RUN};
 }
 
 sub _render_event {

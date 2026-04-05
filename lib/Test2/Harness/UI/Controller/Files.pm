@@ -31,7 +31,7 @@ sub handle {
     my $username     = $route->{username};
     my $failed       = $route->{failed};
 
-    error(404 => 'No source') unless $source || $project_name;
+    die error(404 => 'No source') unless $source || $project_name;
     my $schema = $self->{+CONFIG}->schema;
 
     my $query = {status => 'complete'};

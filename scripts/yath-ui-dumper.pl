@@ -7,7 +7,7 @@ use Test2::Harness::UI::Config;
 use Test2::Harness::UI::Dumper;
 
 if (grep { m/^-+(h(?:elp)?|\?)$/ } @ARGV) {
-    print "Usage: $0 outputfile 'DSN' ['USER'] ['PASSWORD']\nDSN is required, sql username and password are optional.\n";
+    print "Usage: $0 'DSN' ['USER'] ['PASSWORD']\nDSN is required, sql username and password are optional.\n";
     exit 0;
 }
 

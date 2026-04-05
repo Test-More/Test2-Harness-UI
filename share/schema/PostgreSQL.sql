@@ -38,8 +38,8 @@ CREATE TYPE user_type AS ENUM(
 CREATE TABLE users (
     user_id         UUID            DEFAULT UUID_GENERATE_V4() PRIMARY KEY,
     username        CITEXT          NOT NULL,
-    pw_hash         VARCHAR(31)     DEFAULT NULL,
-    pw_salt         VARCHAR(22)     DEFAULT NULL,
+    pw_hash         VARCHAR(128)    DEFAULT NULL,
+    pw_salt         VARCHAR(64)     DEFAULT NULL,
     realname        TEXT            DEFAULT NULL,
     role            user_type       NOT NULL DEFAULT 'user',
 

@@ -1,8 +1,8 @@
 CREATE TABLE users (
     user_id         BINARY(16)      NOT NULL PRIMARY KEY,
     username        VARCHAR(64)     NOT NULL,
-    pw_hash         VARCHAR(31)     DEFAULT NULL,
-    pw_salt         VARCHAR(22)     DEFAULT NULL,
+    pw_hash         VARCHAR(128)    DEFAULT NULL,
+    pw_salt         VARCHAR(64)     DEFAULT NULL,
     realname        VARCHAR(64)     DEFAULT NULL,
     role ENUM(
         'admin',    -- Can add users and set permissions

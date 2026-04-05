@@ -26,7 +26,7 @@ function build_interactions(item, state) {
             state = {};
             var uri = base_uri + 'interactions/data/' + event_id + '/' + val;
             t2hui.fetch(uri, {}, function(item) { build_interactions(item, state) });
-            return true;
+            return false;
         });
 
         var list = $('<ol></ol>');

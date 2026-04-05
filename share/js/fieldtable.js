@@ -377,10 +377,9 @@ function FieldTable(spec) {
         else {
             me.header.prepend(col);
 
-            var row;
             Object.values(me.rows).forEach(function(row) {
                 var td = $('<td class="' + cclass + '"></td>');
-                row.append(td);
+                row.html.append(td);
                 row.dynamic_columns.push(td);
             });
         }

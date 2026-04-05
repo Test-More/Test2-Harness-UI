@@ -127,7 +127,8 @@ sub stats {
         },
 
         fetch => sub {
-            my $data = $self->build_stat($project => shift(@$stats));
+            my $s = shift(@$stats) or return;
+            my $data = $self->build_stat($project => $s);
             return encode_json($data) . "\n";
         },
     );

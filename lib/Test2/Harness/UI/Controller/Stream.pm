@@ -268,7 +268,13 @@ sub stream_single {
             return if $unchanged;
 
             my $data = $method ? $it->$method : $it->TO_JSON;
-            return encode_json({type => $type, update => $update, data => $data}) . "\n";
+            my $json;
+            local $@;
+            unless (eval { $json = encode_json({type => $type, update => $update, data => $data}); 1 }) {
+                warn "Failed to encode $type: $@";
+                return;
+            }
+            return "$json\n";
         },
     ];
 }
@@ -358,7 +364,13 @@ sub stream_set {
                 }
 
                 my $data = $method ? $item->$method : $item->TO_JSON;
-                return encode_json({type => $type, update => $update, data => $data}) . "\n";
+                my $json;
+                local $@;
+                unless (eval { $json = encode_json({type => $type, update => $update, data => $data}); 1 }) {
+                    warn "Failed to encode $type: $@";
+                    next;
+                }
+                return "$json\n";
             }
 
             $items = undef;

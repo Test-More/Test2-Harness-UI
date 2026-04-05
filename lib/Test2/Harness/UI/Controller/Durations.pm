@@ -43,7 +43,7 @@ sub handle {
         );
     }
 
-    my $ct ||= lc($req->headers->{'content-type'} || $req->parameters->{'Content-Type'} || $req->parameters->{'content-type'} || 'text/html; charset=utf-8');
+    my $ct = lc($req->headers->{'content-type'} || $req->parameters->{'Content-Type'} || $req->parameters->{'content-type'} || 'text/html; charset=utf-8');
     $res->content_type($ct);
 
     if ($ct eq 'application/json') {

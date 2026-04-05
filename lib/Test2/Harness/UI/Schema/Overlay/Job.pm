@@ -115,7 +115,7 @@ sub normalize_to_mode {
     if (mode_check($mode, 'summary', 'qvf')) {
         my $has_binary = $self->events->search({has_binary => 1});
         while (my $e = $has_binary->next()) {
-            $has_binary->binaries->delete;
+            $e->binaries->delete;
             $e->delete;
         }
 

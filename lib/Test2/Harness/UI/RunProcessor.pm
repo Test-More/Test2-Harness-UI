@@ -82,6 +82,7 @@ sub retry_on_disconnect {
         # Try to fix the connection
         for (1 .. 10) {
             $self->schema->storage->disconnect;
+            eval { $self->schema->storage->ensure_connected };
             last if $self->schema->storage->connected;
             sleep 1;
         }

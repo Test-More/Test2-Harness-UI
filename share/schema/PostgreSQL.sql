@@ -114,7 +114,9 @@ CREATE TABLE log_files (
     log_file_id     UUID            DEFAULT UUID_GENERATE_V4() PRIMARY KEY,
     name            TEXT            NOT NULL,
     local_file      TEXT,
-    data            BYTEA
+    data            BYTEA,
+
+    CHECK (local_file IS NOT NULL OR data IS NOT NULL)
 );
 
 CREATE TABLE projects (

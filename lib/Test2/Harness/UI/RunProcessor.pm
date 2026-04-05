@@ -763,7 +763,7 @@ sub add_subtest_duration {
 
     my $start    = $parent->{start_stamp} // return;
     my $stop     = $parent->{stop_stamp}  // return;
-    my $duration = $stop - $start         // return;
+    my $duration = $stop - $start;
 
     push @{$job->{reporting}} => {
         duration => $duration,

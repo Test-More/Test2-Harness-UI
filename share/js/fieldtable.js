@@ -185,7 +185,7 @@ function FieldTable(spec) {
                         row.columns[row.columns.length - 1].after(col);
                     }
                     else {
-                        row.prepend(col);
+                        row.html.prepend(col);
                     }
 
                     row.dynamic_columns.push(col);

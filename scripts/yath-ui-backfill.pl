@@ -14,6 +14,7 @@ if (grep { m/^-+(h(?:elp)?|\?)$/ } @ARGV) {
 my $dsn = shift @ARGV // die "Must provide a DSN as the first command line argument";
 
 my ($meth, $user, $pass) = @ARGV;
+die "Must provide a method as the second command line argument\n" unless $meth;
 
 my $config = Test2::Harness::UI::Config->new(
     dbi_dsn     => $dsn,

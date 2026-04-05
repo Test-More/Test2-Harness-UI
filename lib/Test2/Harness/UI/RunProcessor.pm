@@ -395,7 +395,7 @@ sub user {
     my $user_id = $self->{+USER_ID} // confess "No user or user_id specified";
 
     my $schema = $self->schema;
-    my $user = $schema->resultset('Run')->search({user_id => $user_id})->first;
+    my $user = $schema->resultset('User')->search({user_id => $user_id})->first;
     return $user if $user;
     confess "Invalid user_id: $user_id";
 }

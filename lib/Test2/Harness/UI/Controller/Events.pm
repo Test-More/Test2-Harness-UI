@@ -48,6 +48,8 @@ sub handle {
         return $res;
     }
 
+    $query{job_key} = $event->job_key;
+
     if ($p->{load_subtests}) {
         # If we are loading subtests then we want ALL descendants, so here
         # we take the parent event and find the next event of the same

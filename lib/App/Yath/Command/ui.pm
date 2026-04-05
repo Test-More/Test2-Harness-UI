@@ -33,7 +33,7 @@ option_group {prefix => 'ui', category => "UI Options"} => sub {
     option schema => (
         type => 's',
         default => 'PostgreSQL',
-        long_examples => [' PostgreSQL', ' MySQL', ' MySQL56'],
+        long_examples => [' PostgreSQL', ' MySQL'],
         description => "What type of DB/schema to use",
     );
 

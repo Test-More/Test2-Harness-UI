@@ -73,13 +73,15 @@ CREATE TABLE hosts (
 CREATE TABLE email_verification_codes (
     evcode_id       UUID            DEFAULT UUID_GENERATE_V4() PRIMARY KEY,
     email_id        UUID            NOT NULL REFERENCES email(email_id),
+    created         TIMESTAMP       NOT NULL DEFAULT now(),
 
     unique(email_id)
 );
 
 CREATE TABLE sessions (
-    session_id      UUID     DEFAULT UUID_GENERATE_V4() PRIMARY KEY,
-    active          BOOL     DEFAULT TRUE
+    session_id      UUID        DEFAULT UUID_GENERATE_V4() PRIMARY KEY,
+    active          BOOL        DEFAULT TRUE,
+    created         TIMESTAMP   NOT NULL DEFAULT now()
 );
 
 CREATE TABLE session_hosts (

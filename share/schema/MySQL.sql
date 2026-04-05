@@ -42,6 +42,7 @@ CREATE TABLE hosts (
 CREATE TABLE email_verification_codes (
     evcode_id       BINARY(16)      NOT NULL PRIMARY KEY,
     email_id        BINARY(16)      NOT NULL,
+    created         TIMESTAMP       NOT NULL DEFAULT now(),
 
     FOREIGN KEY (email_id) REFERENCES email(email_id),
 
@@ -50,7 +51,8 @@ CREATE TABLE email_verification_codes (
 
 CREATE TABLE sessions (
     session_id      BINARY(16)  NOT NULL PRIMARY KEY,
-    active          BOOL        DEFAULT TRUE
+    active          BOOL        DEFAULT TRUE,
+    created         TIMESTAMP   NOT NULL DEFAULT now()
 ) ROW_FORMAT=COMPRESSED;
 
 CREATE TABLE session_hosts (

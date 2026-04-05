@@ -86,7 +86,7 @@ sub durations {
         my @ids = map { $_->[0] } @{$sth->fetchall_arrayref};
 
         if (@ids) {
-            $query .= "AND run_id IN (" . ('?' x scalar @ids) . ")\n";
+            $query .= "AND run_id IN (" . join(',', ('?') x scalar @ids) . ")\n";
             push @vals => (@ids);
         }
     }

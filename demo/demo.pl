@@ -47,9 +47,9 @@ my $config = Test2::Harness::UI::Config->new(
 my $user = $config->schema->resultset('User')->create({username => 'root', password => 'root', realname => 'root', user_id => gen_uuid()});
 
 my %projects;
-for my $file (qw/moose.jsonl.bz2/) {
-#opendir(my $dh, 'demo') or die "Could not open demo dir";
-#for my $file (sort readdir($dh)) {
+#for my $file (qw/moose.jsonl.bz2/) {
+opendir(my $dh, 'demo') or die "Could not open demo dir";
+for my $file (sort readdir($dh)) {
     next unless $file =~ m/\.bz2$/;
 
     load_file($file);

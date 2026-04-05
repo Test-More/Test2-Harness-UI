@@ -89,7 +89,8 @@ sub init {
         my $user = $config->schema->resultset('User')->create({username => 'root', password => 'root', realname => 'root', user_id => gen_uuid()});
         my $project = $config->schema->resultset('Project')->create({name => 'test', project_id => gen_uuid()});
 
-        exec('starman', '-Ilib', '--listen' => ($self->{+PORT} ? ":$self->{+PORT}" : $self->{+SOCKET}), '--workers', 5, share_file('psgi/test.psgi')),
+        exec('starman', '-Ilib', '--listen' => ($self->{+PORT} ? ":$self->{+PORT}" : $self->{+SOCKET}), '--workers', 5, share_file('psgi/test.psgi'))
+            or die "exec failed: $!";
     }
 
     $self->{+_STARMAN_PID} = $pid;

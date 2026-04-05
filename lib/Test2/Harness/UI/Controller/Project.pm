@@ -72,7 +72,7 @@ sub handle {
     if (my $uuid = uuid_inflate($it)) {
         $project //= $schema->resultset('Project')->single({project_id => $uuid});
     }
-    error(404 => 'Invalid Project') unless $project;
+    die error(404 => 'Invalid Project') unless $project;
 
     return $self->html($req, $project, $n)
         unless $stats;

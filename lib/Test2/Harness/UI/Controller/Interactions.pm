@@ -25,6 +25,7 @@ sub handle {
 
     my $id      = uuid_inflate($route->{id}) or die error(404 => 'No event id provided');
     my $context = $route->{context} // 1;
+    die error(400 => 'Invalid context value') unless $context =~ m/^\d+$/;
     return $self->data($id, $context) if $route->{data};
 
     my $res = resp(200);

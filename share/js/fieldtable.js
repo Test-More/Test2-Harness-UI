@@ -73,7 +73,7 @@ function FieldTable(spec) {
         else {
             return me._render_item(item, id, params);
         }
-    },
+    };
 
     me._render_item = function(item, id, params) {
         var row = me.render_row(item, id, params);

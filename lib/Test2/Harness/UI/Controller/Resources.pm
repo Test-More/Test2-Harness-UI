@@ -260,7 +260,7 @@ sub render_resource {
         }
     }
 
-    return {resource => $r->module, groups => $r->data};
+    return {resource => $r->module, groups => $data};
 }
 
 

@@ -148,7 +148,7 @@ t2hui.sanitize_class = function(text) {
 }
 
 t2hui.build_tooltip = function(box, text) {
-    var ddd = $('<span class="tooltip-expand"><img src="/img/dotdotdot.png" /></span');
+    var ddd = $('<span class="tooltip-expand"><img src="/img/dotdotdot.png" /></span>');
 
     var tooltip;
     var locked = false;

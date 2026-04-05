@@ -20,6 +20,7 @@ sub handle {
     my $req = $self->{+REQUEST};
     my $res = resp(200);
 
+    die error(401 => 'Login required') unless $req->user;
     die error(404 => 'Missing route') unless $route;
     my $count = $route->{count} or die error(404 => 'No count');
     my $units = $route->{units} or die error(404 => 'No units');

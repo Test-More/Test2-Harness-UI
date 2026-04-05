@@ -48,6 +48,7 @@ sub handle {
     die error(404) unless $run;
 
     if ($delete) {
+        die error(401 => 'Login required') unless $req->user;
         $run->coverages->delete;
         $run->update({has_coverage => 0});
     }

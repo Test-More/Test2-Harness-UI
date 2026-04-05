@@ -32,6 +32,7 @@ sub handle {
     my $field = $schema->resultset('JobField')->search({job_field_id => $it})->first or die error(404 => 'Invalid Field');
 
     if (my $act = $route->{action}) {
+        die error(401 => 'Login required') unless $user;
         if ($act eq 'delete') {
             $field->delete;
         }

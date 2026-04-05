@@ -39,6 +39,8 @@ sub handle {
     }
 
     if (my $act = $route->{action}) {
+        die error(401 => 'Login required') unless $user;
+
         if ($act eq 'pin_toggle') {
             $run->update({pinned => $run->pinned ? 0 : 1});
         }

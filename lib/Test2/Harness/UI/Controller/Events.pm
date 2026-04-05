@@ -63,6 +63,7 @@ sub handle {
             },
         );
 
+        die error(404 => 'Cannot find subtest boundary') unless $end_at;
         $query{event_ord} = {'>' => $event->event_ord, '<' => $end_at->event_ord};
     }
     else {

@@ -343,6 +343,7 @@ sub stream_set {
                 );
             }
 
+            my @batch;
             while (my $item = $items->next()) {
                 $ord = $item->$ord_field;
 
@@ -370,8 +371,11 @@ sub stream_set {
                     warn "Failed to encode $type: $@";
                     next;
                 }
-                return "$json\n";
+                push @batch => "$json\n";
+                last if @batch >= 50;
             }
+
+            return join('', @batch) if @batch;
 
             $items = undef;
             return;

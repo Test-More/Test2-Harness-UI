@@ -162,7 +162,7 @@ CREATE TABLE sweeps (
     run_id          BINARY(16)      NOT NULL,
     name            VARCHAR(255)    NOT NULL,
 
-    FOREIGN KEY (run_id) REFERENCES runs(run_id),
+    FOREIGN KEY (run_id) REFERENCES runs(run_id) ON DELETE CASCADE,
 
     UNIQUE(run_id, name)
 ) ROW_FORMAT=COMPRESSED;
@@ -177,7 +177,7 @@ CREATE TABLE run_fields (
     raw             TEXT            DEFAULT NULL,
     link            TEXT            DEFAULT NULL,
 
-    FOREIGN KEY (run_id) REFERENCES runs(run_id),
+    FOREIGN KEY (run_id) REFERENCES runs(run_id) ON DELETE CASCADE,
 
     UNIQUE(run_id, name)
 ) ROW_FORMAT=COMPRESSED;
@@ -245,7 +245,7 @@ CREATE TABLE job_fields (
     raw             TEXT            DEFAULT NULL,
     link            TEXT            DEFAULT NULL,
 
-    FOREIGN KEY (job_key) REFERENCES jobs(job_key),
+    FOREIGN KEY (job_key) REFERENCES jobs(job_key) ON DELETE CASCADE,
 
     UNIQUE(job_key, name)
 ) ROW_FORMAT=COMPRESSED;
@@ -278,7 +278,7 @@ CREATE TABLE events (
     orphan_line     BIGINT      DEFAULT NULL,
 
     UNIQUE(insert_ord, job_key),
-    FOREIGN KEY (job_key) REFERENCES jobs(job_key)
+    FOREIGN KEY (job_key) REFERENCES jobs(job_key) ON DELETE CASCADE
 ) ROW_FORMAT=COMPRESSED;
 CREATE INDEX event_job    ON events(job_key);
 CREATE INDEX event_trace  ON events(trace_id);
@@ -293,7 +293,7 @@ CREATE TABLE binaries (
     is_image        BOOL            NOT NULL DEFAULT FALSE,
     data            LONGBLOB        NOT NULL,
 
-    FOREIGN KEY (event_id)        REFERENCES events(event_id)
+    FOREIGN KEY (event_id)        REFERENCES events(event_id) ON DELETE CASCADE
 );
 
 CREATE TABLE source_files (
@@ -366,7 +366,7 @@ CREATE TABLE reporting (
     FOREIGN KEY (user_id)         REFERENCES users(user_id),
     FOREIGN KEY (job_key)         REFERENCES jobs(job_key),
     FOREIGN KEY (test_file_id)    REFERENCES test_files(test_file_id),
-    FOREIGN KEY (event_id)        REFERENCES events(event_id)
+    FOREIGN KEY (event_id)        REFERENCES events(event_id) ON DELETE SET NULL
 );
 CREATE INDEX reporting_user ON reporting(user_id);
 CREATE INDEX reporting_a    ON reporting(project_id);
@@ -392,6 +392,6 @@ CREATE TABLE resources (
     module              VARCHAR(512)    NOT NULL,
     data                JSON            NOT NULL,
 
-    FOREIGN KEY (resource_batch_id) REFERENCES resource_batch(resource_batch_id),
+    FOREIGN KEY (resource_batch_id) REFERENCES resource_batch(resource_batch_id) ON DELETE CASCADE,
     UNIQUE(resource_batch_id, batch_ord)
 ) ROW_FORMAT=COMPRESSED;

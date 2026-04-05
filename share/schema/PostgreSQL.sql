@@ -172,16 +172,16 @@ CREATE INDEX IF NOT EXISTS run_user ON runs(user_id);
 
 CREATE TABLE sweeps (
     sweep_id        UUID            NOT NULL PRIMARY KEY,
-    run_id          UUID            NOT NULL REFERENCES runs(run_id),
+    run_id          UUID            NOT NULL REFERENCES runs(run_id) ON DELETE CASCADE,
     name            VARCHAR(255)    NOT NULL,
 
-    UNIQUE(name, run_id)
+    UNIQUE(run_id, name)
 );
 CREATE INDEX IF NOT EXISTS sweep_runs ON sweeps(run_id);
 
 CREATE TABLE run_fields (
     run_field_id    UUID            NOT NULL PRIMARY KEY,
-    run_id          UUID            NOT NULL REFERENCES runs(run_id),
+    run_id          UUID            NOT NULL REFERENCES runs(run_id) ON DELETE CASCADE,
     name            VARCHAR(255)    NOT NULL,
     data            JSONB           DEFAULT NULL,
     details         TEXT            DEFAULT NULL,
@@ -239,7 +239,7 @@ CREATE INDEX IF NOT EXISTS job_file ON jobs(test_file_id);
 
 CREATE TABLE job_fields (
     job_field_id    UUID            NOT NULL PRIMARY KEY,
-    job_key         UUID            NOT NULL REFERENCES jobs(job_key),
+    job_key         UUID            NOT NULL REFERENCES jobs(job_key) ON DELETE CASCADE,
     name            VARCHAR(512)    NOT NULL,
     data            JSONB           DEFAULT NULL,
     details         TEXT            DEFAULT NULL,
@@ -252,7 +252,7 @@ CREATE TABLE job_fields (
 CREATE TABLE events (
     event_id        UUID        NOT NULL PRIMARY KEY,
 
-    job_key         UUID        NOT NULL REFERENCES jobs(job_key),
+    job_key         UUID        NOT NULL REFERENCES jobs(job_key) ON DELETE CASCADE,
 
     event_ord       BIGINT      NOT NULL,
     insert_ord      BIGSERIAL   NOT NULL,
@@ -282,7 +282,7 @@ CREATE INDEX IF NOT EXISTS is_subtest   ON events(is_subtest);
 
 CREATE TABLE binaries (
     binary_id       UUID            NOT NULL PRIMARY KEY,
-    event_id        UUID            NOT NULL REFERENCES events(event_id),
+    event_id        UUID            NOT NULL REFERENCES events(event_id) ON DELETE CASCADE,
     filename        VARCHAR(512)    NOT NULL,
     description     TEXT            DEFAULT NULL,
     is_image        BOOL            NOT NULL DEFAULT FALSE,
@@ -345,7 +345,7 @@ CREATE TABLE reporting (
     user_id         UUID    NOT NULL     REFERENCES users(user_id),
     job_key         UUID    DEFAULT NULL REFERENCES jobs(job_key),
     test_file_id    UUID    DEFAULT NULL REFERENCES test_files(test_file_id),
-    event_id        UUID    DEFAULT NULL REFERENCES events(event_id)
+    event_id        UUID    DEFAULT NULL REFERENCES events(event_id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS reporting_user ON reporting(user_id);
 CREATE INDEX IF NOT EXISTS reporting_a    ON reporting(project_id);
@@ -363,7 +363,7 @@ CREATE TABLE resource_batch (
 
 CREATE TABLE resources (
     resource_id         UUID            DEFAULT UUID_GENERATE_V4() PRIMARY KEY,
-    resource_batch_id   UUID            NOT NULL REFERENCES resource_batch(resource_batch_id),
+    resource_batch_id   UUID            NOT NULL REFERENCES resource_batch(resource_batch_id) ON DELETE CASCADE,
     batch_ord           INT             NOT NULL,
     module              VARCHAR(512)    NOT NULL,
     data                JSONB           NOT NULL,

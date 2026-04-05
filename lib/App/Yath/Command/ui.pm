@@ -2,7 +2,7 @@ package App::Yath::Command::ui;
 use strict;
 use warnings;
 
-our $VERSION = '0.000146';
+our $VERSION = '0.000147';
 
 use Test2::Util qw/pkg_to_file/;
 

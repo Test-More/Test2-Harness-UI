@@ -110,6 +110,7 @@ $(function() {
         "select": null,
     };
 
+    var tailing = false;
     var complete = false;
     t2hui.fetch(
         stamp_uri,

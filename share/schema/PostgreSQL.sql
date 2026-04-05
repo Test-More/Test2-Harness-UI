@@ -288,6 +288,7 @@ CREATE TABLE binaries (
     is_image        BOOL            NOT NULL DEFAULT FALSE,
     data            BYTEA           NOT NULL
 );
+CREATE INDEX IF NOT EXISTS binaries_event ON binaries(event_id);
 
 CREATE TABLE source_files (
     source_file_id  UUID            NOT NULL PRIMARY KEY,
@@ -348,11 +349,12 @@ CREATE TABLE reporting (
     event_id        UUID    DEFAULT NULL REFERENCES events(event_id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS reporting_user ON reporting(user_id);
-CREATE INDEX IF NOT EXISTS reporting_a    ON reporting(project_id);
 CREATE INDEX IF NOT EXISTS reporting_b    ON reporting(project_id, user_id);
 CREATE INDEX IF NOT EXISTS reporting_c    ON reporting(project_id, test_file_id, subtest);
 CREATE INDEX IF NOT EXISTS reporting_d    ON reporting(project_id, test_file_id, subtest, user_id);
 CREATE INDEX IF NOT EXISTS reporting_e    ON reporting(project_id, test_file_id, subtest, user_id, run_ord);
+CREATE INDEX IF NOT EXISTS reporting_run  ON reporting(run_id);
+CREATE INDEX IF NOT EXISTS reporting_job  ON reporting(job_key);
 
 CREATE TABLE resource_batch (
     resource_batch_id   UUID            DEFAULT UUID_GENERATE_V4() PRIMARY KEY,
@@ -360,6 +362,7 @@ CREATE TABLE resource_batch (
     host_id             UUID            NOT NULL REFERENCES hosts(host_id),
     stamp               TIMESTAMP(4)    NOT NULL
 );
+CREATE INDEX IF NOT EXISTS resource_batch_run ON resource_batch(run_id);
 
 CREATE TABLE resources (
     resource_id         UUID            DEFAULT UUID_GENERATE_V4() PRIMARY KEY,

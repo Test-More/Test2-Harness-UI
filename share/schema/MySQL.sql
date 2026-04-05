@@ -295,6 +295,7 @@ CREATE TABLE binaries (
 
     FOREIGN KEY (event_id)        REFERENCES events(event_id) ON DELETE CASCADE
 );
+CREATE INDEX binaries_event ON binaries(event_id);
 
 CREATE TABLE source_files (
     source_file_id  BINARY(16)                                          NOT NULL PRIMARY KEY,
@@ -369,11 +370,12 @@ CREATE TABLE reporting (
     FOREIGN KEY (event_id)        REFERENCES events(event_id) ON DELETE SET NULL
 );
 CREATE INDEX reporting_user ON reporting(user_id);
-CREATE INDEX reporting_a    ON reporting(project_id);
 CREATE INDEX reporting_b    ON reporting(project_id, user_id);
 CREATE INDEX reporting_c    ON reporting(project_id, test_file_id, subtest);
 CREATE INDEX reporting_d    ON reporting(project_id, test_file_id, subtest, user_id);
 CREATE INDEX reporting_e    ON reporting(project_id, test_file_id, subtest, user_id, run_ord);
+CREATE INDEX reporting_run  ON reporting(run_id);
+CREATE INDEX reporting_job  ON reporting(job_key);
 
 CREATE TABLE resource_batch (
     resource_batch_id   BINARY(16)      NOT NULL PRIMARY KEY,
@@ -384,6 +386,7 @@ CREATE TABLE resource_batch (
     FOREIGN KEY (run_id)  REFERENCES runs(run_id),
     FOREIGN KEY (host_id) REFERENCES hosts(host_id)
 ) ROW_FORMAT=COMPRESSED;
+CREATE INDEX resource_batch_run ON resource_batch(run_id);
 
 CREATE TABLE resources (
     resource_id         BINARY(16)      NOT NULL PRIMARY KEY,

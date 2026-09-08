@@ -135,7 +135,7 @@ sub get_from_db {
         username     => $user,
         project_name => $project,
         query        => {},
-        attrs        => {order_by => {'-desc' => 'added'}, rows => $count},
+        attrs        => {order_by => {'-desc' => 'run_ord'}, rows => $count},
         list         => 1,
     );
 

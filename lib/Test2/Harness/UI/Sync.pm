@@ -119,17 +119,31 @@ sub sync {
     }
 
     close($rh);
-    $self->write_sync(
-        dbh     => $from_dbh,
-        run_ids => $run_ids,
-        wh      => $wh,
-        skip    => $skip,
-        debug   => $debug,
-        uuidf   => $from_uuidf,
-    );
-    close($wh);
+
+    my ($ok, $err);
+    {
+        # If the loader dies early our writes fail with EPIPE instead of the
+        # signal killing us, so the loader's failure can still be reported.
+        local $SIG{PIPE} = 'IGNORE';
+
+        $ok = eval {
+            $self->write_sync(
+                dbh     => $from_dbh,
+                run_ids => $run_ids,
+                wh      => $wh,
+                skip    => $skip,
+                debug   => $debug,
+                uuidf   => $from_uuidf,
+            );
+            1;
+        };
+        $err = $@;
+
+        close($wh);
+    }
 
     die "Loader exited badly" if $self->wait_on($pid => "[Loader] $name");
+    die $err unless $ok;
 
     return;
 }
@@ -157,7 +171,14 @@ sub wait_on {
     }
 
     return 0 unless $exit;
-    warn "$desc exited badly: $exit\n";
+
+    if (my $sig = $exit & 127) {
+        warn "$desc was killed by signal $sig\n";
+    }
+    else {
+        warn "$desc exited badly: " . ($exit >> 8) . "\n";
+    }
+
     return $exit;
 }
 
@@ -247,7 +268,7 @@ sub write_sync {
                 $subcount++;
                 my ($key) = keys(%$item);
                 my $line = encode_json($item);
-                print $wh $line, "\n";
+                print $wh $line, "\n" or die "Could not write to the loader: $!";
             }
         }
 
@@ -808,7 +829,8 @@ Copy data from the source database to the destination database.
 
 The data is loaded by a forked child process using its own connection to the
 destination database. Both handles passed in remain connected and usable after
-C<sync()> returns; closing them is up to the caller.
+C<sync()> returns; closing them is up to the caller. If the loader process
+fails C<sync()> dies, and the loader warns with the reason it failed.
 
 =item $sync->write_sync(...)
 

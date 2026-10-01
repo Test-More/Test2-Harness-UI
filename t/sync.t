@@ -2,6 +2,7 @@ use Test2::V0;
 use Test2::IPC;
 use Test2::Tools::QuickDB;
 use File::Temp;
+use Time::HiRes;
 
 BEGIN { $ENV{T2_HARNESS_UI_ENV} = 'dev' }
 use Test2::Harness::UI::Sync;
@@ -289,50 +290,77 @@ for my $schema_name (qw/MySQL PostgreSQL/) {
             $usable->($to_dbh,   "Destination");
         };
 
-        subtest loader_failure => sub {
-            my $run_id = gen_uuid()->string;
-            $add_run->($dbh_a, $ids_a, $run_id, 'complete');
-
-            my $from_dbh = $connect->('a');
-            my $to_dbh   = $connect->('b');
-
-            no warnings 'redefine';
-            # Drain the pipe first so the parent is not killed by SIGPIPE.
-            local *Test2::Harness::UI::Sync::read_sync = sub {
+        # The loader fails once all data was sent, or before the parent writes
+        # anything, so the parent's writes hit a closed pipe.
+        my $marker = File::Temp::tempdir(CLEANUP => 1) . "/loader-closed";
+        my %stubs  = (
+            after_data => sub {
                 my ($self, %params) = @_;
                 1 while readline($params{rh});
                 die "loader boom\n";
+            },
+            early => sub {
+                my ($self, %params) = @_;
+                close($params{rh});
+                open(my $fh, '>', $marker) or die "Could not create '$marker': $!";
+                close($fh)                 or die "Could not close '$marker': $!";
+                die "loader boom\n";
+            },
+        );
+
+        for my $case (sort keys %stubs) {
+            subtest "loader_failure_$case" => sub {
+                my $run_id = gen_uuid()->string;
+                $add_run->($dbh_a, $ids_a, $run_id, 'complete');
+
+                my $from_dbh = $connect->('a');
+                my $to_dbh   = $connect->('b');
+
+                no warnings 'redefine';
+                local *Test2::Harness::UI::Sync::read_sync = $stubs{$case};
+
+                my $render_runs = \&Test2::Harness::UI::Sync::render_runs;
+                local *Test2::Harness::UI::Sync::render_runs = sub {
+                    my $deadline = Time::HiRes::time() + 10;
+                    until ($case ne 'early' || -e $marker) {
+                        die "Loader did not close the pipe within 10 seconds\n" if Time::HiRes::time() > $deadline;
+                        Time::HiRes::sleep(0.01);
+                    }
+                    return $render_runs->(@_);
+                };
+
+                # Do not use dies {} or warnings {} here: dies {} localizes $?,
+                # which clobbers the loader child's exit code when it exits from
+                # inside that scope, and the child's warnings would only be
+                # captured in the child's copy of the array.
+                my $err;
+                my $stderr = $capture->(
+                    sub {
+                        local $SIG{__WARN__};
+                        local $SIG{PIPE} = 'DEFAULT';    # It may be inherited as ignored
+                        eval {
+                            $sync->sync(
+                                from_dbh         => $from_dbh,
+                                to_dbh           => $to_dbh,
+                                run_ids          => [$run_id],
+                                from_uuid_format => $uuidf,
+                                to_uuid_format   => $uuidf,
+                                name             => 'failing loader',
+                            );
+                            1;
+                        } or $err = $@;
+                    },
+                    \*STDERR
+                );
+
+                like($err,    qr/Loader exited badly/,                           "sync() dies when the loader fails");
+                like($stderr, qr/\[Loader\] failing loader failed: loader boom/, "Loader reported why it failed");
+                like($stderr, qr/\[Loader\] failing loader exited badly: 255/,   "Parent reported the loader exit code");
+
+                $usable->($from_dbh, "Source");
+                $usable->($to_dbh,   "Destination");
             };
-
-            # Do not use dies {} or warnings {} here: dies {} localizes $?,
-            # which clobbers the loader child's exit code when it exits from
-            # inside that scope, and the child's warnings would only be
-            # captured in the child's copy of the array.
-            my $err;
-            my $stderr = $capture->(
-                sub {
-                    local $SIG{__WARN__};
-                    eval {
-                        $sync->sync(
-                            from_dbh         => $from_dbh,
-                            to_dbh           => $to_dbh,
-                            run_ids          => [$run_id],
-                            from_uuid_format => $uuidf,
-                            to_uuid_format   => $uuidf,
-                            name             => 'failing loader',
-                        );
-                        1;
-                    } or $err = $@;
-                },
-                \*STDERR
-            );
-
-            like($err,    qr/Loader exited badly/,                           "sync() dies when the loader fails");
-            like($stderr, qr/\[Loader\] failing loader failed: loader boom/, "Loader reported why it failed");
-
-            $usable->($from_dbh, "Source");
-            $usable->($to_dbh,   "Destination");
-        };
+        }
 
         subtest read_sync_leaves_handle => sub {
             my $run_id = gen_uuid()->string;

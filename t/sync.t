@@ -281,6 +281,29 @@ for my $schema_name (qw/MySQL PostgreSQL/) {
             $usable->($from_dbh, "Source");
             $usable->($to_dbh,   "Destination");
         };
+
+        subtest read_sync_leaves_handle => sub {
+            my $run_id = gen_uuid()->string;
+            $add_run->($dbh_a, $ids_a, $run_id, 'complete');
+            $add_children->($dbh_a, $run_id);
+
+            my $jsonl = '';
+            open(my $wh, '>', \$jsonl) or die "Could not open in-memory handle: $!";
+            $sync->write_sync(dbh => $dbh_a, run_ids => [$run_id], wh => $wh, uuidf => $uuidf);
+            close($wh);
+
+            open(my $rh, '<', \$jsonl) or die "Could not open in-memory handle: $!";
+            my $to_dbh = $connect->('b');
+            $sync->read_sync(dbh => $to_dbh, run_ids => [$run_id], rh => $rh, uuidf => $uuidf);
+
+            $usable->($to_dbh, "Caller supplied");
+            ok($to_dbh->{AutoCommit}, "AutoCommit setting was restored");
+            is(
+                $count_children->($to_dbh, $run_id),
+                \%all_rows,
+                "Run and its child rows were imported and committed",
+            );
+        };
     };
 
     exit 0;

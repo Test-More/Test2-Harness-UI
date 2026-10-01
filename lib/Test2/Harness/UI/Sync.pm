@@ -271,6 +271,7 @@ sub read_sync {
     my $cache   = $params{cache} // {};
     my $debug   = $params{debug} // 0;
 
+    my $auto_commit = $dbh->{AutoCommit};
     $dbh->{AutoCommit} = 0;
 
     my %include = map {($_ => 1)} @$run_ids;
@@ -332,7 +333,7 @@ sub read_sync {
     }
 
     $dbh->commit();
-    $dbh->disconnect();
+    $dbh->{AutoCommit} = $auto_commit;
 
     return;
 }
@@ -827,6 +828,10 @@ Read the jsonl data and insert it into the database.
         cache   => $cache,      # Optional uuid cache map.
         debug   => 0,           # Optional, turn on for verbosity
     );
+
+Each run is imported in its own transaction; a run that fails to import is
+rolled back and skipped. On success the handle is left connected, with its
+original C<AutoCommit> setting restored.
 
 =item $uuid = $sync->get_or_create_id($cache, $dbh, $uuidf, $table, $uuid_field, $value_field, $value)
 

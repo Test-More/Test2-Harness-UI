@@ -1,5 +1,7 @@
 {{$NEXT}}
 
+0.000150  2026-10-01 11:01:53-07:00 America/Los_Angeles
+
     - Database sync no longer closes the caller's database connections when its loader process exits.
     - Sync read_sync() no longer disconnects the database handle it is given.
     - Database sync debug output now reports the final run as imported or broken.

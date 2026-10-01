@@ -279,6 +279,18 @@ sub read_sync {
     my $counter = 0;
     my $last_run_id;
     my $broken;
+
+    my $report = sub {
+        return unless $debug && $last_run_id;
+
+        if ($broken) {
+            print "  BROKEN run $counter/$total: $last_run_id\n";
+        }
+        else {
+            print "Imported run $counter/$total: $last_run_id\n";
+        }
+    };
+
     while (my $line = <$rh>) {
         my $data = decode_json($line);
 
@@ -289,14 +301,7 @@ sub read_sync {
             $dbh->commit();
             $dbh->{AutoCommit} = 0;
 
-            if ($debug && $last_run_id) {
-                if ($broken) {
-                    print "  BROKEN run $counter/$total: $last_run_id\n";
-                }
-                else {
-                    print "Imported run $counter/$total: $last_run_id\n";
-                }
-            }
+            $report->();
 
             $broken = undef;
             my $new_run_id = $data->{$type}->{run_id};
@@ -333,6 +338,8 @@ sub read_sync {
     }
 
     $dbh->commit();
+    $report->();
+
     $dbh->{AutoCommit} = $auto_commit;
 
     return;

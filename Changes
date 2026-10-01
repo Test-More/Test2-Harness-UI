@@ -2,6 +2,7 @@
 
     - Database sync no longer closes the caller's database connections when its loader process exits.
     - Sync read_sync() no longer disconnects the database handle it is given.
+    - Database sync debug output now reports the final run as imported or broken.
 
 0.000149  2026-09-24 14:32:20-07:00 America/Los_Angeles
 

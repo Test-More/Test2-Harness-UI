@@ -164,6 +164,7 @@ for my $schema_name (qw/MySQL PostgreSQL/) {
         };
 
         my %all_rows = (runs => 1, run_fields => 1, jobs => 1, job_fields => 1);
+        my %no_rows  = (runs => 0, run_fields => 0, jobs => 0, job_fields => 0);
 
         subtest stale_delta => sub {
             # Simulate a stale delta: include a run that already exists in the destination.
@@ -219,6 +220,7 @@ for my $schema_name (qw/MySQL PostgreSQL/) {
             );
 
             like($out, qr{^\s*Dumped run 1/1: \Q$run_id\E$}m, "Reported the dump");
+            like($out, qr{^Imported run 1/1: \Q$run_id\E$}m,  "Reported the import of the final run");
             unlike($out, qr/BROKEN/, "Nothing broken");
 
             # The parent's handles must survive the loader child exiting.
@@ -235,6 +237,56 @@ for my $schema_name (qw/MySQL PostgreSQL/) {
 
             ok($from_dbh->disconnect, "Source handle disconnects cleanly");
             ok($to_dbh->disconnect,   "Destination handle disconnects cleanly");
+        };
+
+        subtest multi_run_broken_last => sub {
+            my @good = map { gen_uuid()->string } 1 .. 3;
+            for my $run_id (@good) {
+                $add_run->($dbh_a, $ids_a, $run_id, 'complete');
+                $add_children->($dbh_a, $run_id);
+            }
+
+            # The final run has a job whose (job_id, job_try) already exists in
+            # the destination under another run, so its import fails.
+            my $blocker = gen_uuid()->string;
+            $add_run->($dbh_b, $ids_b, $blocker, 'complete');
+            my $job_id = $add_children->($dbh_b, $blocker);
+
+            my $bad = gen_uuid()->string;
+            $add_run->($dbh_a, $ids_a, $bad, 'complete');
+            $add_children->($dbh_a, $bad, job_id => $job_id);
+
+            my $from_dbh = $connect->('a');
+            my $to_dbh   = $connect->('b');
+
+            my $out = $capture->(
+                sub {
+                    $sync->sync(
+                        from_dbh         => $from_dbh,
+                        to_dbh           => $to_dbh,
+                        run_ids          => [@good, $bad],
+                        from_uuid_format => $uuidf,
+                        to_uuid_format   => $uuidf,
+                        debug            => 1,
+                    );
+                }
+            );
+
+            my $i = 0;
+            for my $run_id (@good) {
+                $i++;
+                my @imported = ($out =~ m/^Imported run \Q$i\E\/4: \Q$run_id\E$/mg);
+                is(scalar(@imported),                   1,          "Run $i reported as imported exactly once");
+                is($count_children->($to_dbh, $run_id), \%all_rows, "Run $i imported with child rows");
+            }
+
+            my @broken = ($out =~ m/^\s*BROKEN run 4\/4: \Q$bad\E$/mg);
+            is(scalar(@broken), 1, "Final broken run reported exactly once");
+            unlike($out, qr/Imported run 4\/4/, "Final broken run not reported as imported");
+            is($count_children->($to_dbh, $bad), \%no_rows, "Final broken run was rolled back");
+
+            $usable->($from_dbh, "Source");
+            $usable->($to_dbh,   "Destination");
         };
 
         subtest loader_failure => sub {

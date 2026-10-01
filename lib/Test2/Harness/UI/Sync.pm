@@ -79,39 +79,82 @@ sub sync {
     unless ($pid) {
         close($wh);
 
+        # Every handle open at fork time, including from_dbh and to_dbh, was
+        # inherited from the parent and still belongs to it. Destroying them
+        # here would close the parent's connections, so the loader works on
+        # its own connection to the destination instead.
+        $self->_inactivate_inherited_handles();
+
         my $guard = Scope::Guard->new(sub {
             warn "Scope Leak";
             exit 255;
         });
 
-        $self->read_sync(
-            dbh     => $to_dbh,
-            run_ids => $run_ids,
-            rh      => $rh,
-            cache   => $cache,
-            debug   => $debug,
-            uuidf   => $to_uuidf,
-        );
+        my $ok = eval {
+            my $dbh = $to_dbh->clone() or die "Could not connect to the destination database: " . $DBI::errstr;
+            $dbh->{InactiveDestroy} = 0;    # clone() copies it from the inherited handle
+
+            $self->read_sync(
+                dbh     => $dbh,
+                run_ids => $run_ids,
+                rh      => $rh,
+                cache   => $cache,
+                debug   => $debug,
+                uuidf   => $to_uuidf,
+            );
+
+            $dbh->disconnect();
+            1;
+        };
+        my $err = $@;
 
         $guard->dismiss();
+
+        unless ($ok) {
+            warn "[Loader] $name failed: $err";
+            exit 255;
+        }
 
         exit 0;
     }
 
     close($rh);
-    $self->write_sync(
-        dbh     => $from_dbh,
-        run_ids => $run_ids,
-        wh      => $wh,
-        skip    => $skip,
-        debug   => $debug,
-        uuidf   => $from_uuidf,
-    );
-    close($wh);
+
+    my ($ok, $err);
+    {
+        # If the loader dies early our writes fail with EPIPE instead of the
+        # signal killing us, so the loader's failure can still be reported.
+        local $SIG{PIPE} = 'IGNORE';
+
+        $ok = eval {
+            $self->write_sync(
+                dbh     => $from_dbh,
+                run_ids => $run_ids,
+                wh      => $wh,
+                skip    => $skip,
+                debug   => $debug,
+                uuidf   => $from_uuidf,
+            );
+            1;
+        };
+        $err = $@;
+
+        close($wh);
+    }
 
     die "Loader exited badly" if $self->wait_on($pid => "[Loader] $name");
+    die $err unless $ok;
 
     return;
+}
+
+sub _inactivate_inherited_handles {
+    my %drivers = DBI->installed_drivers();
+    for my $drh (values %drivers) {
+        for my $dbh (grep { defined } @{$drh->{ChildHandles} // []}) {
+            $dbh->{InactiveDestroy} = 1;
+        }
+    }
 }
 
 sub wait_on {
@@ -128,7 +171,14 @@ sub wait_on {
     }
 
     return 0 unless $exit;
-    warn "$desc exited badly: $exit\n";
+
+    if (my $sig = $exit & 127) {
+        warn "$desc was killed by signal $sig\n";
+    }
+    else {
+        warn "$desc exited badly: " . ($exit >> 8) . "\n";
+    }
+
     return $exit;
 }
 
@@ -218,7 +268,7 @@ sub write_sync {
                 $subcount++;
                 my ($key) = keys(%$item);
                 my $line = encode_json($item);
-                print $wh $line, "\n";
+                print $wh $line, "\n" or die "Could not write to the loader: $!";
             }
         }
 
@@ -242,6 +292,7 @@ sub read_sync {
     my $cache   = $params{cache} // {};
     my $debug   = $params{debug} // 0;
 
+    my $auto_commit = $dbh->{AutoCommit};
     $dbh->{AutoCommit} = 0;
 
     my %include = map {($_ => 1)} @$run_ids;
@@ -249,6 +300,18 @@ sub read_sync {
     my $counter = 0;
     my $last_run_id;
     my $broken;
+
+    my $report = sub {
+        return unless $debug && $last_run_id;
+
+        if ($broken) {
+            print "  BROKEN run $counter/$total: $last_run_id\n";
+        }
+        else {
+            print "Imported run $counter/$total: $last_run_id\n";
+        }
+    };
+
     while (my $line = <$rh>) {
         my $data = decode_json($line);
 
@@ -259,14 +322,7 @@ sub read_sync {
             $dbh->commit();
             $dbh->{AutoCommit} = 0;
 
-            if ($debug && $last_run_id) {
-                if ($broken) {
-                    print "  BROKEN run $counter/$total: $last_run_id\n";
-                }
-                else {
-                    print "Imported run $counter/$total: $last_run_id\n";
-                }
-            }
+            $report->();
 
             $broken = undef;
             my $new_run_id = $data->{$type}->{run_id};
@@ -303,7 +359,9 @@ sub read_sync {
     }
 
     $dbh->commit();
-    $dbh->disconnect();
+    $report->();
+
+    $dbh->{AutoCommit} = $auto_commit;
 
     return;
 }
@@ -769,6 +827,11 @@ Copy data from the source database to the destination database.
         to_uuid_format   => 'binary',    # Defaults to 'binary' may be 'string' for older databases
     );
 
+The data is loaded by a forked child process using its own connection to the
+destination database. Both handles passed in remain connected and usable after
+C<sync()> returns; closing them is up to the caller. If the loader process
+fails C<sync()> dies, and the loader warns with the reason it failed.
+
 =item $sync->write_sync(...)
 
 Output the data to jsonl format.
@@ -794,6 +857,10 @@ Read the jsonl data and insert it into the database.
         cache   => $cache,      # Optional uuid cache map.
         debug   => 0,           # Optional, turn on for verbosity
     );
+
+Each run is imported in its own transaction; a run that fails to import is
+rolled back and skipped. On success the handle is left connected, with its
+original C<AutoCommit> setting restored.
 
 =item $uuid = $sync->get_or_create_id($cache, $dbh, $uuidf, $table, $uuid_field, $value_field, $value)
 

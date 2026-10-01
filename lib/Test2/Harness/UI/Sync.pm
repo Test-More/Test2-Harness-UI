@@ -79,21 +79,41 @@ sub sync {
     unless ($pid) {
         close($wh);
 
+        # Every handle open at fork time, including from_dbh and to_dbh, was
+        # inherited from the parent and still belongs to it. Destroying them
+        # here would close the parent's connections, so the loader works on
+        # its own connection to the destination instead.
+        $self->_inactivate_inherited_handles();
+
         my $guard = Scope::Guard->new(sub {
             warn "Scope Leak";
             exit 255;
         });
 
-        $self->read_sync(
-            dbh     => $to_dbh,
-            run_ids => $run_ids,
-            rh      => $rh,
-            cache   => $cache,
-            debug   => $debug,
-            uuidf   => $to_uuidf,
-        );
+        my $ok = eval {
+            my $dbh = $to_dbh->clone() or die "Could not connect to the destination database: " . $DBI::errstr;
+            $dbh->{InactiveDestroy} = 0;    # clone() copies it from the inherited handle
+
+            $self->read_sync(
+                dbh     => $dbh,
+                run_ids => $run_ids,
+                rh      => $rh,
+                cache   => $cache,
+                debug   => $debug,
+                uuidf   => $to_uuidf,
+            );
+
+            $dbh->disconnect();
+            1;
+        };
+        my $err = $@;
 
         $guard->dismiss();
+
+        unless ($ok) {
+            warn "[Loader] $name failed: $err";
+            exit 255;
+        }
 
         exit 0;
     }
@@ -112,6 +132,15 @@ sub sync {
     die "Loader exited badly" if $self->wait_on($pid => "[Loader] $name");
 
     return;
+}
+
+sub _inactivate_inherited_handles {
+    my %drivers = DBI->installed_drivers();
+    for my $drh (values %drivers) {
+        for my $dbh (grep { defined } @{$drh->{ChildHandles} // []}) {
+            $dbh->{InactiveDestroy} = 1;
+        }
+    }
 }
 
 sub wait_on {
@@ -768,6 +797,10 @@ Copy data from the source database to the destination database.
         from_uuid_format => 'binary',    # Defaults to 'binary' may be 'string' for older databases
         to_uuid_format   => 'binary',    # Defaults to 'binary' may be 'string' for older databases
     );
+
+The data is loaded by a forked child process using its own connection to the
+destination database. Both handles passed in remain connected and usable after
+C<sync()> returns; closing them is up to the caller.
 
 =item $sync->write_sync(...)
 

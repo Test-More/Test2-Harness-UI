@@ -1,6 +1,7 @@
 use Test2::V0;
 use Test2::IPC;
 use Test2::Tools::QuickDB;
+use File::Temp;
 
 BEGIN { $ENV{T2_HARNESS_UI_ENV} = 'dev' }
 use Test2::Harness::UI::Sync;
@@ -105,35 +106,189 @@ for my $schema_name (qw/MySQL PostgreSQL/) {
         # schema (jobs.fields), so only test the import on MySQL.
         return unless $schema_name eq 'MySQL';
 
-        # Simulate a stale delta: include a run that already exists in the destination.
-        my $to_dbh = $connect->('b');
-        $sync->sync(
-            from_dbh         => $connect->('a'),
-            to_dbh           => $to_dbh,
-            run_ids          => [@{$delta->{missing_in_b}}, $runs{dst_broken}],
-            from_uuid_format => $uuidf,
-            to_uuid_format   => $uuidf,
-        );
-        $to_dbh->{InactiveDestroy} = 1;
+        # Capture everything printed to STDOUT (or STDERR) by sync() and its
+        # loader child. This has to go through a file since the child cannot
+        # write into the parent's memory.
+        my $capture = sub {
+            my ($code, $fh) = @_;
+            $fh //= \*STDOUT;
+            my $tmp = File::Temp->new();
+            open(my $orig, '>&', $fh)  or die "Could not dup handle: $!";
+            open($fh,      '>&', $tmp) or die "Could not redirect handle: $!";
+            my $ok  = eval { $code->(); 1 };
+            my $err = $@;
+            $fh->flush();
+            open($fh, '>&', $orig) or die "Could not restore handle: $!";
+            die $err unless $ok;
+            seek($tmp, 0, 0);
+            return join '' => <$tmp>;
+        };
 
-        my $check = $connect->('b');
-        my $rows  = $check->selectall_arrayref("SELECT run_id, status FROM runs");
-        my %got   = map { (uuid_inflate($_->[0])->string => $_->[1]) } @$rows;
+        my $usable = sub {
+            my ($dbh, $name) = @_;
+            ok(eval { $dbh->selectrow_array('SELECT 1') }, "$name handle is still usable") or diag($@);
+        };
 
-        is(
-            \%got,
-            {
-                $runs{absent_complete} => 'complete',
-                $runs{absent_canceled} => 'canceled',
-                map { ($runs{"dst_$_"} => $_) } qw/complete canceled broken pending running/,
-            },
-            "Absent runs were imported, existing destination run was left untouched",
+        my $add_children = sub {
+            my ($dbh, $run_id, %params) = @_;
+            my $job_key = gen_uuid();
+            my $job_id  = $params{job_id} // gen_uuid();
+            my $file_id = gen_uuid();
+            $dbh->do("INSERT INTO test_files(test_file_id, filename) VALUES(?, ?)", undef, $file_id->$uuidf, "t/$job_key.t");
+            $dbh->do(
+                "INSERT INTO jobs(job_key, job_id, job_ord, run_id, status, test_file_id) VALUES(?, ?, 1, ?, 'complete', ?)",
+                undef, $job_key->$uuidf, $job_id->$uuidf, uuid_inflate($run_id)->$uuidf, $file_id->$uuidf,
+            );
+            $dbh->do(
+                "INSERT INTO run_fields(run_field_id, run_id, name, details) VALUES(?, ?, 'rf', 'run field')",
+                undef, gen_uuid()->$uuidf, uuid_inflate($run_id)->$uuidf,
+            );
+            $dbh->do(
+                "INSERT INTO job_fields(job_field_id, job_key, name, details) VALUES(?, ?, 'jf', 'job field')",
+                undef, gen_uuid()->$uuidf, $job_key->$uuidf,
+            );
+            return $job_id;
+        };
+
+        my %count_from = (
+            runs       => 'runs',
+            run_fields => 'run_fields',
+            jobs       => 'jobs',
+            job_fields => 'job_fields JOIN jobs USING(job_key)',
         );
+
+        my $count_children = sub {
+            my ($dbh, $run_id) = @_;
+            my $id = uuid_inflate($run_id)->$uuidf;
+            return {map { ($_ => $dbh->selectrow_array("SELECT COUNT(*) FROM $count_from{$_} WHERE run_id = ?", undef, $id)) } keys %count_from};
+        };
+
+        my %all_rows = (runs => 1, run_fields => 1, jobs => 1, job_fields => 1);
+
+        subtest stale_delta => sub {
+            # Simulate a stale delta: include a run that already exists in the destination.
+            my $from_dbh = $connect->('a');
+            my $to_dbh   = $connect->('b');
+            $sync->sync(
+                from_dbh         => $from_dbh,
+                to_dbh           => $to_dbh,
+                run_ids          => [@{$delta->{missing_in_b}}, $runs{dst_broken}],
+                from_uuid_format => $uuidf,
+                to_uuid_format   => $uuidf,
+            );
+
+            $usable->($from_dbh, "Source");
+            $usable->($to_dbh,   "Destination");
+
+            my $rows = $to_dbh->selectall_arrayref("SELECT run_id, status FROM runs");
+            my %got  = map { (uuid_inflate($_->[0])->string => $_->[1]) } @$rows;
+
+            is(
+                \%got,
+                {
+                    $runs{absent_complete} => 'complete',
+                    $runs{absent_canceled} => 'canceled',
+                    map { ($runs{"dst_$_"} => $_) } qw/complete canceled broken pending running/,
+                },
+                "Absent runs were imported, existing destination run was left untouched",
+            );
+
+            ok($from_dbh->disconnect, "Source handle disconnects cleanly");
+            ok($to_dbh->disconnect,   "Destination handle disconnects cleanly");
+        };
+
+        subtest one_run => sub {
+            my $run_id = gen_uuid()->string;
+            $add_run->($dbh_a, $ids_a, $run_id, 'complete');
+            $add_children->($dbh_a, $run_id);
+
+            my $from_dbh = $connect->('a');
+            my $to_dbh   = $connect->('b');
+
+            my $out = $capture->(
+                sub {
+                    $sync->sync(
+                        from_dbh         => $from_dbh,
+                        to_dbh           => $to_dbh,
+                        run_ids          => [$run_id],
+                        from_uuid_format => $uuidf,
+                        to_uuid_format   => $uuidf,
+                        debug            => 1,
+                    );
+                }
+            );
+
+            like($out, qr{^\s*Dumped run 1/1: \Q$run_id\E$}m, "Reported the dump");
+            unlike($out, qr/BROKEN/, "Nothing broken");
+
+            # The parent's handles must survive the loader child exiting.
+            $usable->($from_dbh, "Source");
+            $usable->($to_dbh,   "Destination");
+
+            is(
+                $count_children->($to_dbh, $run_id),
+                \%all_rows,
+                "Run and its child rows are in the destination after the first sync",
+            );
+
+            is($sync->run_delta($from_dbh, $to_dbh)->{missing_in_b}, [], "Nothing left to sync");
+
+            ok($from_dbh->disconnect, "Source handle disconnects cleanly");
+            ok($to_dbh->disconnect,   "Destination handle disconnects cleanly");
+        };
+
+        subtest loader_failure => sub {
+            my $run_id = gen_uuid()->string;
+            $add_run->($dbh_a, $ids_a, $run_id, 'complete');
+
+            my $from_dbh = $connect->('a');
+            my $to_dbh   = $connect->('b');
+
+            no warnings 'redefine';
+            # Drain the pipe first so the parent is not killed by SIGPIPE.
+            local *Test2::Harness::UI::Sync::read_sync = sub {
+                my ($self, %params) = @_;
+                1 while readline($params{rh});
+                die "loader boom\n";
+            };
+
+            # Do not use dies {} or warnings {} here: dies {} localizes $?,
+            # which clobbers the loader child's exit code when it exits from
+            # inside that scope, and the child's warnings would only be
+            # captured in the child's copy of the array.
+            my $err;
+            my $stderr = $capture->(
+                sub {
+                    local $SIG{__WARN__};
+                    eval {
+                        $sync->sync(
+                            from_dbh         => $from_dbh,
+                            to_dbh           => $to_dbh,
+                            run_ids          => [$run_id],
+                            from_uuid_format => $uuidf,
+                            to_uuid_format   => $uuidf,
+                            name             => 'failing loader',
+                        );
+                        1;
+                    } or $err = $@;
+                },
+                \*STDERR
+            );
+
+            like($err,    qr/Loader exited badly/,                           "sync() dies when the loader fails");
+            like($stderr, qr/\[Loader\] failing loader failed: loader boom/, "Loader reported why it failed");
+
+            $usable->($from_dbh, "Source");
+            $usable->($to_dbh,   "Destination");
+        };
     };
 
     exit 0;
 }
 
-waitpid($_, 0) for @pids;
+for my $pid (@pids) {
+    waitpid($pid, 0);
+    is($?, 0, "Forked test process $pid exited cleanly");
+}
 
 done_testing;
